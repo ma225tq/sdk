@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation and contributors. All rights reserved.
+// Copyright (c) .NET Foundation and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 //
 
@@ -108,13 +108,6 @@ public class PackageTests
               "Icon.png",
               "Microsoft.NET.Build.Containers.nuspec",
               "README.md",
-              "tasks/net472/Microsoft.NET.Build.Containers.dll",
-              "tasks/net472/Newtonsoft.Json.dll",
-              "tasks/net472/NuGet.Common.dll",
-              "tasks/net472/NuGet.Configuration.dll",
-              "tasks/net472/NuGet.Frameworks.dll",
-              "tasks/net472/NuGet.Packaging.dll",
-              "tasks/net472/NuGet.Versioning.dll",
               $"tasks/{netTFM}/Microsoft.DotNet.Cli.Utils.dll",
               $"tasks/{netTFM}/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
               $"tasks/{netTFM}/Microsoft.Extensions.DependencyInjection.dll",
