@@ -3,10 +3,8 @@
         <TargetFramework>$(SdkTargetFramework)</TargetFramework>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <IsPackable>true</IsPackable>
-        <IsShipping>true</IsShipping>
+        <IsShipping>false</IsShipping>
         <IsShippingPackage>true</IsShippingPackage>
-        <NoWarn>NU5100;NU5128</NoWarn>
-
         <!-- MSBuild tasks shouldn't be referenced. This is by design. -->
         <NoWarn>NU5100;NU5128;NU1507</NoWarn>
         <Authors>Microsoft</Authors>
