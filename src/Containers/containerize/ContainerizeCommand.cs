@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.CommandLine;
@@ -135,7 +135,7 @@ internal class ContainerizeCommand : RootCommand
                 {
                     if (ContainerHelpers.TryParsePort(split[0], split[1], out var portInfo, out var portError))
                     {
-                        goodPorts.Add(portInfo.Value);
+                        goodPorts.Add(portInfo!.Value);
                     }
                     else
                     {
@@ -147,7 +147,7 @@ internal class ContainerizeCommand : RootCommand
                 {
                     if (ContainerHelpers.TryParsePort(split[0], out var portInfo, out var portError))
                     {
-                        goodPorts.Add(portInfo.Value);
+                        goodPorts.Add(portInfo!.Value);
                     }
                     else
                     {
