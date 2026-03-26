@@ -272,7 +272,7 @@ public sealed partial class CreateNewImage : Microsoft.Build.Utilities.Task, ICa
             var portType = port.GetMetadata("Type");
             if (ContainerHelpers.TryParsePort(portNo, portType, out Port? parsedPort, out ContainerHelpers.ParsePortError? errors))
             {
-                image.ExposePort(parsedPort.Value.Number, parsedPort.Value.Type);
+                image.ExposePort(parsedPort!.Value.Number, parsedPort.Value.Type);
             }
             else
             {
