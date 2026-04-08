@@ -76,6 +76,14 @@ namespace Microsoft.DotNet.Watch
                 into g
                 select (g.Key, containingDirectories ? [] : g.Select(path => Path.GetFileName(path)).ToImmutableHashSet(PathUtilities.OSSpecificPathComparer));
 
+            // Consolidate sibling directories to reduce the number of FileSystemWatcher instances.
+            if (containingDirectories && includeSubdirectories)
+            {
+                var directories = filesByDirectory.Select(d => d.Key).ToList();
+                var consolidated = ConsolidateDirectories(directories);
+                filesByDirectory = consolidated.Select(d => (d, ImmutableHashSet<string>.Empty)).ToList();
+            }
+
             foreach (var (directory, fileNames) in filesByDirectory)
             {
                 // the directory is watched by active directory watcher:
@@ -148,6 +156,103 @@ namespace Microsoft.DotNet.Watch
                     _directoryWatchers.Add(directory, newWatcher);
                 }
             }
+        }
+
+        /// <summary>
+        /// Reduces the number of watched directories by collapsing sibling directories into their common parent.
+        /// For example, watching ProjectA/, ProjectB/, ProjectC/ under the same parent is replaced by a single
+        /// watcher on the parent directory with includeSubdirectories.
+        /// </summary>
+        internal static List<string> ConsolidateDirectories(List<string> directories)
+        {
+            if (directories.Count <= 1)
+            {
+                return directories;
+            }
+
+            var comparer = Path.DirectorySeparatorChar == '\\' ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            directories.Sort(comparer);
+
+            // Remove directories already covered by a parent in the sorted list.
+            var roots = new List<string>(directories.Count);
+            foreach (var dir in directories)
+            {
+                if (roots.Count > 0 && dir.StartsWith(roots[^1], PathUtilities.OSSpecificPathComparison))
+                {
+                    continue;
+                }
+
+                roots.Add(dir);
+            }
+
+            // Repeatedly merge siblings into their common parent until stable.
+            bool changed;
+            do
+            {
+                changed = false;
+
+                var groups = new Dictionary<string, List<string>>(PathUtilities.OSSpecificPathComparer);
+                foreach (var dir in roots)
+                {
+                    var trimmed = dir.TrimEnd(Path.DirectorySeparatorChar);
+                    var parent = Path.GetDirectoryName(trimmed);
+                    if (parent == null)
+                    {
+                        continue;
+                    }
+
+                    var parentKey = PathUtilities.EnsureTrailingSlash(parent);
+                    if (!groups.TryGetValue(parentKey, out var siblings))
+                    {
+                        siblings = [];
+                        groups[parentKey] = siblings;
+                    }
+
+                    siblings.Add(dir);
+                }
+
+                var next = new List<string>(roots.Count);
+                var consolidated = new HashSet<string>(PathUtilities.OSSpecificPathComparer);
+
+                foreach (var (parent, siblings) in groups)
+                {
+                    if (siblings.Count > 1)
+                    {
+                        next.Add(parent);
+                        foreach (var s in siblings)
+                        {
+                            consolidated.Add(s);
+                        }
+
+                        changed = true;
+                    }
+                }
+
+                foreach (var dir in roots)
+                {
+                    if (!consolidated.Contains(dir))
+                    {
+                        next.Add(dir);
+                    }
+                }
+
+                if (changed)
+                {
+                    next.Sort(comparer);
+                    roots = [];
+                    foreach (var dir in next)
+                    {
+                        if (roots.Count > 0 && dir.StartsWith(roots[^1], PathUtilities.OSSpecificPathComparison))
+                        {
+                            continue;
+                        }
+
+                        roots.Add(dir);
+                    }
+                }
+            } while (changed);
+
+            return roots;
         }
 
         private void WatcherErrorHandler(object? sender, Exception error)

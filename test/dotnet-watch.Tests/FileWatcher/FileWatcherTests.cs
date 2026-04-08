@@ -145,6 +145,75 @@ namespace Microsoft.DotNet.Watch.UnitTests
             AssertEx.SequenceEqual([$"{dirA}: []"], Inspect(watcher.DirectoryWatchers));
         }
 
+        [Fact]
+        public void ConsolidateDirectories_RemovesChildDirectories()
+        {
+            string root = Path.Combine(TestContext.Current.TestExecutionDirectory, "repo") + Path.DirectorySeparatorChar;
+            var dirs = new List<string>
+            {
+                root + "src" + Path.DirectorySeparatorChar + "A" + Path.DirectorySeparatorChar,
+                root + "src" + Path.DirectorySeparatorChar + "A" + Path.DirectorySeparatorChar + "sub" + Path.DirectorySeparatorChar,
+            };
+
+            var result = FileWatcher.ConsolidateDirectories(dirs);
+
+            Assert.Single(result);
+            Assert.Equal(root + "src" + Path.DirectorySeparatorChar + "A" + Path.DirectorySeparatorChar, result[0]);
+        }
+
+        [Fact]
+        public void ConsolidateDirectories_ConsolidatesSiblings()
+        {
+            string root = Path.Combine(TestContext.Current.TestExecutionDirectory, "repo") + Path.DirectorySeparatorChar;
+            var dirs = new List<string>
+            {
+                root + "src" + Path.DirectorySeparatorChar + "A" + Path.DirectorySeparatorChar,
+                root + "src" + Path.DirectorySeparatorChar + "B" + Path.DirectorySeparatorChar,
+                root + "src" + Path.DirectorySeparatorChar + "C" + Path.DirectorySeparatorChar,
+            };
+
+            var result = FileWatcher.ConsolidateDirectories(dirs);
+
+            Assert.Single(result);
+            Assert.Equal(root + "src" + Path.DirectorySeparatorChar, result[0]);
+        }
+
+        [Fact]
+        public void ConsolidateDirectories_LargeProjectStructure()
+        {
+            string root = Path.Combine(TestContext.Current.TestExecutionDirectory, "repo") + Path.DirectorySeparatorChar;
+            var dirs = new List<string>();
+
+            for (int i = 0; i < 200; i++)
+            {
+                dirs.Add(root + "Submodule" + Path.DirectorySeparatorChar + $"Project{i}" + Path.DirectorySeparatorChar);
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                dirs.Add(root + $"Service{i}" + Path.DirectorySeparatorChar);
+            }
+
+            var result = FileWatcher.ConsolidateDirectories(dirs);
+
+            Assert.True(result.Count <= 2, $"Expected at most 2 watchers but got {result.Count}: [{string.Join(", ", result)}]");
+        }
+
+        [Fact]
+        public void ConsolidateDirectories_SingleDirectory()
+        {
+            var dirs = new List<string> { "/some/path/" };
+            var result = FileWatcher.ConsolidateDirectories(dirs);
+            Assert.Single(result);
+        }
+
+        [Fact]
+        public void ConsolidateDirectories_Empty()
+        {
+            var result = FileWatcher.ConsolidateDirectories([]);
+            Assert.Empty(result);
+        }
+
         [Theory]
         [CombinatorialData]
         public async Task NewFile(bool usePolling)
