@@ -49,6 +49,7 @@ internal static class EnvironmentVariables
 
     public static bool SuppressHandlingStaticContentFiles => ReadBool("DOTNET_WATCH_SUPPRESS_STATIC_FILE_HANDLING");
     public static bool SuppressMSBuildIncrementalism => ReadBool("DOTNET_WATCH_SUPPRESS_MSBUILD_INCREMENTALISM");
+    public static bool SkipDesignTimeBuild => ReadBool("DOTNET_WATCH_SKIP_DESIGN_TIME_BUILD");
     public static bool SuppressLaunchBrowser => ReadBool("DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER");
     public static bool SuppressBrowserRefresh => ReadBool(Names.SuppressBrowserRefresh);
 

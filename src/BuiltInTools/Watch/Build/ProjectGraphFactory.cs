@@ -22,7 +22,7 @@ internal sealed class ProjectGraphFactory(ImmutableDictionary<string, string> gl
         loggers: [],
         remoteLoggers: [],
         ToolsetDefinitionLocations.Default,
-        maxNodeCount: 1,
+        maxNodeCount: Environment.ProcessorCount,
         onlyLogCriticalEvents: false,
         loadProjectsReadOnly: false,
         useAsynchronousLogging: false,

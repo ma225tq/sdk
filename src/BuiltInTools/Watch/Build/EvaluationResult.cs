@@ -87,6 +87,8 @@ internal sealed class EvaluationResult(IReadOnlyDictionary<string, FileItem> fil
         }
 
         var fileItems = new Dictionary<string, FileItem>();
+        var skipDesignTimeBuild = environmentOptions.SkipDesignTimeBuild;
+        var riskyProjects = new List<string>();
 
         foreach (var project in projectGraph.ProjectNodesTopologicallySorted)
         {
@@ -103,8 +105,19 @@ internal sealed class EvaluationResult(IReadOnlyDictionary<string, FileItem> fil
 
             var customCollectWatchItems = projectInstance.GetStringListPropertyValue(PropertyNames.CustomCollectWatchItems);
 
-            using (var loggers = buildReporter.GetLoggers(projectInstance.FullPath, "DesignTimeBuild"))
+            if (skipDesignTimeBuild)
             {
+                var hasAnalyzers = projectInstance.GetItems(ItemNames.Analyzer).Count > 0;
+                var hasCustomWatchTargets = customCollectWatchItems.Any();
+                if (hasAnalyzers || hasCustomWatchTargets)
+                {
+                    var reason = hasCustomWatchTargets ? "CustomCollectWatchItems" : "Analyzer";
+                    riskyProjects.Add($"{projectInstance.FullPath} ({reason})");
+                }
+            }
+            else
+            {
+                using var loggers = buildReporter.GetLoggers(projectInstance.FullPath, "DesignTimeBuild");
                 if (!projectInstance.Build([TargetNames.Compile, .. customCollectWatchItems], loggers))
                 {
                     logger.LogError("Failed to build project '{Path}'.", projectInstance.FullPath);
@@ -165,6 +178,21 @@ internal sealed class EvaluationResult(IReadOnlyDictionary<string, FileItem> fil
         }
 
         buildReporter.ReportWatchedFiles(fileItems);
+
+        if (skipDesignTimeBuild)
+        {
+            logger.LogWarning("DOTNET_WATCH_SKIP_DESIGN_TIME_BUILD is set. Skipped design-time build for all projects.");
+            if (riskyProjects.Count > 0)
+            {
+                logger.LogWarning(
+                    "{Count} project(s) have analyzers or custom watch targets. File changes from generated code or custom targets may not trigger rebuild:",
+                    riskyProjects.Count);
+                foreach (var project in riskyProjects)
+                {
+                    logger.LogWarning("  - {Project}", project);
+                }
+            }
+        }
 
         return new EvaluationResult(fileItems, projectGraph);
     }

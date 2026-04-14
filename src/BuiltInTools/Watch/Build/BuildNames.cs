@@ -33,6 +33,7 @@ internal static class ItemNames
     public const string Compile = nameof(Compile);
     public const string Content = nameof(Content);
     public const string ProjectCapability = nameof(ProjectCapability);
+    public const string Analyzer = nameof(Analyzer);
 }
 
 internal static class MetadataNames
