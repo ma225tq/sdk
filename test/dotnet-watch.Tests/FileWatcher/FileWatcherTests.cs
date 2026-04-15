@@ -146,7 +146,7 @@ namespace Microsoft.DotNet.Watch.UnitTests
         }
 
         [Fact]
-        public void ConsolidateDirectories_RemovesChildDirectories()
+        public void ConsolidateDirectories_FindsCommonAncestor()
         {
             string root = Path.Combine(TestContext.Current.TestExecutionDirectory, "repo") + Path.DirectorySeparatorChar;
             var dirs = new List<string>
@@ -162,7 +162,7 @@ namespace Microsoft.DotNet.Watch.UnitTests
         }
 
         [Fact]
-        public void ConsolidateDirectories_ConsolidatesSiblings()
+        public void ConsolidateDirectories_ConsolidatesSiblingsToParent()
         {
             string root = Path.Combine(TestContext.Current.TestExecutionDirectory, "repo") + Path.DirectorySeparatorChar;
             var dirs = new List<string>
@@ -196,7 +196,8 @@ namespace Microsoft.DotNet.Watch.UnitTests
 
             var result = FileWatcher.ConsolidateDirectories(dirs);
 
-            Assert.True(result.Count <= 2, $"Expected at most 2 watchers but got {result.Count}: [{string.Join(", ", result)}]");
+            Assert.Single(result);
+            Assert.Equal(root, result[0]);
         }
 
         [Fact]
