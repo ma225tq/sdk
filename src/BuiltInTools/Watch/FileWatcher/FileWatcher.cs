@@ -77,7 +77,7 @@ namespace Microsoft.DotNet.Watch
                 select (g.Key, containingDirectories ? [] : g.Select(path => Path.GetFileName(path)).ToImmutableHashSet(PathUtilities.OSSpecificPathComparer));
 
             // Consolidate sibling directories to reduce the number of FileSystemWatcher instances.
-            if (containingDirectories && includeSubdirectories)
+            if (containingDirectories && includeSubdirectories && OperatingSystem.IsMacOS())
             {
                 var directories = filesByDirectory.Select(d => d.Key).ToList();
                 var consolidated = ConsolidateDirectories(directories);
