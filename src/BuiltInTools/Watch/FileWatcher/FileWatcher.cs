@@ -159,9 +159,10 @@ namespace Microsoft.DotNet.Watch
         }
 
         /// <summary>
-        /// Reduces the number of watched directories by collapsing sibling directories into their common parent.
-        /// For example, watching ProjectA/, ProjectB/, ProjectC/ under the same parent is replaced by a single
-        /// watcher on the parent directory with includeSubdirectories.
+        /// Reduces the number of watched directories by finding the longest common path prefix.
+        /// This minimizes the number of FileSystemWatcher instances to a single watcher on the
+        /// common ancestor directory with includeSubdirectories. Extra file change events from
+        /// unwatched sibling directories are filtered by DirectoryWatcher's filename matching.
         /// </summary>
         internal static List<string> ConsolidateDirectories(List<string> directories)
         {
@@ -170,79 +171,52 @@ namespace Microsoft.DotNet.Watch
                 return directories;
             }
 
-            directories.Sort(PathUtilities.OSSpecificPathComparer);
+            var commonRoot = GetLongestCommonPath(directories);
+            return commonRoot != null ? [commonRoot] : directories;
+        }
 
-
-            // Remove directories already covered by a parent in the sorted list.
-            var roots = new List<string>(directories.Count);
-            foreach (var dir in directories)
+        internal static string? GetLongestCommonPath(List<string> paths)
+        {
+            if (paths.Count == 0)
             {
-                if (roots.Count > 0 && dir.StartsWith(roots[^1], PathUtilities.OSSpecificPathComparison))
-                {
-                    continue;
-                }
-
-                roots.Add(dir);
+                return null;
             }
 
-            // Repeatedly merge siblings into their common parent until stable.
-            bool changed;
-            do
+            // Split first path into segments as reference.
+            var referencePath = paths[0].TrimEnd(Path.DirectorySeparatorChar);
+            var segments = referencePath.Split(Path.DirectorySeparatorChar);
+
+            var commonLength = segments.Length;
+
+            for (var i = 1; i < paths.Count; i++)
             {
-                changed = false;
+                var other = paths[i].TrimEnd(Path.DirectorySeparatorChar);
+                var otherSegments = other.Split(Path.DirectorySeparatorChar);
+                var limit = Math.Min(commonLength, otherSegments.Length);
+                var matched = 0;
 
-                var next = new List<string>(roots.Count);
-                var groups = new Dictionary<string, List<string>>(PathUtilities.OSSpecificPathComparer);
-                foreach (var dir in roots)
+                for (var j = 0; j < limit; j++)
                 {
-                    var trimmed = dir.TrimEnd(Path.DirectorySeparatorChar);
-                    var parent = Path.GetDirectoryName(trimmed);
-                    if (parent == null)
+                    if (string.Equals(segments[j], otherSegments[j], PathUtilities.OSSpecificPathComparison))
                     {
-                        next.Add(dir);
-                        continue;
-                    }
-
-                    var parentKey = PathUtilities.EnsureTrailingSlash(parent);
-                    if (!groups.TryGetValue(parentKey, out var siblings))
-                    {
-                        siblings = [];
-                        groups[parentKey] = siblings;
-                    }
-
-                    siblings.Add(dir);
-                }
-
-                foreach (var (parent, siblings) in groups)
-                {
-                    if (siblings is [var singleChild])
-                    {
-                        next.Add(singleChild);
+                        matched++;
                     }
                     else
                     {
-                        next.Add(parent);
-                        changed = true;
+                        break;
                     }
                 }
 
-                if (changed)
+                commonLength = matched;
+
+                if (commonLength == 0)
                 {
-                    next.Sort(PathUtilities.OSSpecificPathComparer);
-                    roots = [];
-                    foreach (var dir in next)
-                    {
-                        if (roots.Count > 0 && dir.StartsWith(roots[^1], PathUtilities.OSSpecificPathComparison))
-                        {
-                            continue;
-                        }
-
-                        roots.Add(dir);
-                    }
+                    return null;
                 }
-            } while (changed);
+            }
 
-            return roots;
+            var common = string.Join(Path.DirectorySeparatorChar, segments, 0, commonLength);
+            return PathUtilities.EnsureTrailingSlash(common);
         }
 
         private void WatcherErrorHandler(object? sender, Exception error)
