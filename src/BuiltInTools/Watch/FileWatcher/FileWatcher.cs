@@ -170,8 +170,8 @@ namespace Microsoft.DotNet.Watch
                 return directories;
             }
 
-            var comparer = Path.DirectorySeparatorChar == '\\' ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-            directories.Sort(comparer);
+            directories.Sort(PathUtilities.OSSpecificPathComparer);
+
 
             // Remove directories already covered by a parent in the sorted list.
             var roots = new List<string>(directories.Count);
@@ -191,6 +191,7 @@ namespace Microsoft.DotNet.Watch
             {
                 changed = false;
 
+                var next = new List<string>(roots.Count);
                 var groups = new Dictionary<string, List<string>>(PathUtilities.OSSpecificPathComparer);
                 foreach (var dir in roots)
                 {
@@ -198,6 +199,7 @@ namespace Microsoft.DotNet.Watch
                     var parent = Path.GetDirectoryName(trimmed);
                     if (parent == null)
                     {
+                        next.Add(dir);
                         continue;
                     }
 
@@ -211,34 +213,22 @@ namespace Microsoft.DotNet.Watch
                     siblings.Add(dir);
                 }
 
-                var next = new List<string>(roots.Count);
-                var consolidated = new HashSet<string>(PathUtilities.OSSpecificPathComparer);
-
                 foreach (var (parent, siblings) in groups)
                 {
-                    if (siblings.Count > 1)
+                    if (siblings is [var singleChild])
+                    {
+                        next.Add(singleChild);
+                    }
+                    else
                     {
                         next.Add(parent);
-                        foreach (var s in siblings)
-                        {
-                            consolidated.Add(s);
-                        }
-
                         changed = true;
-                    }
-                }
-
-                foreach (var dir in roots)
-                {
-                    if (!consolidated.Contains(dir))
-                    {
-                        next.Add(dir);
                     }
                 }
 
                 if (changed)
                 {
-                    next.Sort(comparer);
+                    next.Sort(PathUtilities.OSSpecificPathComparer);
                     roots = [];
                     foreach (var dir in next)
                     {
