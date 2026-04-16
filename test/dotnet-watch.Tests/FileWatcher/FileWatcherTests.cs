@@ -148,56 +148,53 @@ namespace Microsoft.DotNet.Watch.UnitTests
         [Fact]
         public void ConsolidateDirectories_FindsCommonAncestor()
         {
-            string root = Path.Combine(TestContext.Current.TestExecutionDirectory, "repo") + Path.DirectorySeparatorChar;
+            string root = Path.Join(TestContext.Current.TestExecutionDirectory, "repo") + Path.DirectorySeparatorChar;
             var dirs = new List<string>
             {
-                root + "src" + Path.DirectorySeparatorChar + "A" + Path.DirectorySeparatorChar,
-                root + "src" + Path.DirectorySeparatorChar + "A" + Path.DirectorySeparatorChar + "sub" + Path.DirectorySeparatorChar,
+                Path.Join(root, "src", "A") + Path.DirectorySeparatorChar,
+                Path.Join(root, "src", "A", "sub") + Path.DirectorySeparatorChar,
             };
 
             var result = FileWatcher.ConsolidateDirectories(dirs);
 
-            Assert.Single(result);
-            Assert.Equal(root + "src" + Path.DirectorySeparatorChar + "A" + Path.DirectorySeparatorChar, result[0]);
+            AssertEx.SequenceEqual([Path.Join(root, "src", "A") + Path.DirectorySeparatorChar], result);
         }
 
         [Fact]
         public void ConsolidateDirectories_ConsolidatesSiblingsToParent()
         {
-            string root = Path.Combine(TestContext.Current.TestExecutionDirectory, "repo") + Path.DirectorySeparatorChar;
+            string root = Path.Join(TestContext.Current.TestExecutionDirectory, "repo") + Path.DirectorySeparatorChar;
             var dirs = new List<string>
             {
-                root + "src" + Path.DirectorySeparatorChar + "A" + Path.DirectorySeparatorChar,
-                root + "src" + Path.DirectorySeparatorChar + "B" + Path.DirectorySeparatorChar,
-                root + "src" + Path.DirectorySeparatorChar + "C" + Path.DirectorySeparatorChar,
+                Path.Join(root, "src", "A") + Path.DirectorySeparatorChar,
+                Path.Join(root, "src", "B") + Path.DirectorySeparatorChar,
+                Path.Join(root, "src", "C") + Path.DirectorySeparatorChar,
             };
 
             var result = FileWatcher.ConsolidateDirectories(dirs);
 
-            Assert.Single(result);
-            Assert.Equal(root + "src" + Path.DirectorySeparatorChar, result[0]);
+            AssertEx.SequenceEqual([Path.Join(root, "src") + Path.DirectorySeparatorChar], result);
         }
 
         [Fact]
         public void ConsolidateDirectories_LargeProjectStructure()
         {
-            string root = Path.Combine(TestContext.Current.TestExecutionDirectory, "repo") + Path.DirectorySeparatorChar;
+            string root = Path.Join(TestContext.Current.TestExecutionDirectory, "repo") + Path.DirectorySeparatorChar;
             var dirs = new List<string>();
 
             for (int i = 0; i < 200; i++)
             {
-                dirs.Add(root + "Submodule" + Path.DirectorySeparatorChar + $"Project{i}" + Path.DirectorySeparatorChar);
+                dirs.Add(Path.Join(root, "Submodule", $"Project{i}") + Path.DirectorySeparatorChar);
             }
 
             for (int i = 0; i < 10; i++)
             {
-                dirs.Add(root + $"Service{i}" + Path.DirectorySeparatorChar);
+                dirs.Add(Path.Join(root, $"Service{i}") + Path.DirectorySeparatorChar);
             }
 
             var result = FileWatcher.ConsolidateDirectories(dirs);
 
-            Assert.Single(result);
-            Assert.Equal(root, result[0]);
+            AssertEx.SequenceEqual([root], result);
         }
 
         [Fact]
